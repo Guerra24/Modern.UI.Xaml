@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net9.0-windows10.0.26100.0;net10.0-windows10.0.26100.0</TargetFrameworks>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU</Platforms>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WindowsSdkPackageVersion>10.0.26100.73-preview</WindowsSdkPackageVersion>
+    <UseUwp>true</UseUwp>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <IsAotCompatible>true</IsAotCompatible>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Title>Modern.UI.Xaml</Title>
+    <Authors>Guerra24</Authors>
+    <PackageId>Modern.UI.Xaml</PackageId>
+    <PackageProjectUrl>https://github.com/Guerra24/Modern.UI.Xaml</PackageProjectUrl>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Guerra24/Modern.UI.Xaml</RepositoryUrl>
+    <!--<PackageReadmeFile>README.md</PackageReadmeFile>-->
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="All" Version="2.3.0" />
+    <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.2" />
+    <PackageReference Include="MrmPatcher" Version="0.0.0-alpha.0.15" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="Modern.UI.Xaml/Modern.UI.Xaml.csproj" Id="22a1f4f3-eba1-452d-8bdc-db55fee7ec07" />
+</Solution>
