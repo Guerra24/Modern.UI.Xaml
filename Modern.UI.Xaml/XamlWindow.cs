@@ -116,6 +116,10 @@ public class XamlWindow
             case WM_CREATE:
                 InitializeXaml();
                 break;
+            case WM_SETTINGCHANGE:
+            case WM_THEMECHANGED:
+                ChangeTheme(Application.Current.RequestedTheme == ApplicationTheme.Dark);
+                break;
             case WM_SIZE:
                 {
                     var dpi = GetDpiForWindow(hWnd);
