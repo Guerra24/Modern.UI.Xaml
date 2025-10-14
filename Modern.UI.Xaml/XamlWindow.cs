@@ -32,9 +32,20 @@ public class XamlWindow
         set => xamlSurface.Content = value;
     }
 
-    public XamlWindow(string title)
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int MinWidth { get; set; } = 250;
+    public int MinHeight { get; set; } = 250;
+
+    public XamlWindow(string title) : this(title, CW_USEDEFAULT, CW_USEDEFAULT)
+    {
+    }
+
+    public XamlWindow(string title, int width, int height)
     {
         Title = title;
+        Width = width;
+        Height = height;
         Initialize();
         ((XamlApplication)Application.Current).windows.Add(this);
     }
@@ -52,7 +63,7 @@ public class XamlWindow
         wc.lpszClassName = lpszClassName;
         RegisterClassW(&wc);
 
-        hwnd = CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP, lpszClassName, lpWindowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 976, 521, HWND.NULL, HMENU.NULL, wc.hInstance, null);
+        hwnd = CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP, lpszClassName, lpWindowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, Width, Height, HWND.NULL, HMENU.NULL, wc.hInstance, null);
 
         InitializeXaml();
 
@@ -122,6 +133,17 @@ public class XamlWindow
                     titlebarSurface.Resize(0, y + visualBorder, width, caption + border + visualBorder);
 
                     xamlSurface.Resize(0, y + border + caption + visualBorder * 2, width, height - border - caption - visualBorder * 2);
+
+                    Width = width;
+                    Height = height;
+                }
+                break;
+            case WM_GETMINMAXINFO:
+                {
+                    var dpi = (float)GetDpiForWindow(hWnd) / USER_DEFAULT_SCREEN_DPI;
+                    var mmi = (MINMAXINFO*)lParam;
+                    mmi->ptMinTrackSize.x = (int)(MinWidth * dpi);
+                    mmi->ptMinTrackSize.y = (int)(MinHeight * dpi);
                 }
                 break;
             case WM_NCCALCSIZE:
