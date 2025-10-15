@@ -20,9 +20,16 @@ namespace Modern.UI.Xaml;
 
 public class XamlWindow
 {
+    private static bool BackdropSupported = Environment.OSVersion.Version >= new Version(10, 0, 22621, 0);
+
+    private static HBRUSH LightBackground = CreateSolidBrush(RGB(0xF3, 0xF3, 0xF3));
+    private static HBRUSH DarkBackground = CreateSolidBrush(RGB(0x20, 0x20, 0x20));
+
     private WNDPROC wndProc = null!;
-    private HWND hwnd = default;
+    private HWND window = default;
     private XamlCompositionSurface xamlSurface = null!, titlebarSurface = null!;
+
+    private HBRUSH Background = default;
 
     private string Title;
 
@@ -63,54 +70,82 @@ public class XamlWindow
         wc.lpszClassName = lpszClassName;
         RegisterClassW(&wc);
 
-        hwnd = CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP, lpszClassName, lpWindowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, Width, Height, HWND.NULL, HMENU.NULL, wc.hInstance, null);
+        var style = BackdropSupported ? WS_EX_NOREDIRECTIONBITMAP : WS_EX_RIGHTSCROLLBAR;
+
+        window = CreateWindowExW((uint)style, lpszClassName, lpWindowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, Width, Height, HWND.NULL, HMENU.NULL, wc.hInstance, null);
 
         InitializeXaml();
 
         ChangeTheme(Application.Current.RequestedTheme == ApplicationTheme.Dark);
 
-        var margins = new MARGINS();
-        margins.cxLeftWidth = -1;
-        margins.cxRightWidth = -1;
-        margins.cyBottomHeight = -1;
-        margins.cyTopHeight = -1;
-        DwmExtendFrameIntoClientArea(hwnd, &margins);
-
-        if (Environment.OSVersion.Version >= new Version(10, 0, 22621, 0))
+        if (BackdropSupported)
         {
+            var margins = new MARGINS();
+            margins.cxLeftWidth = -1;
+            margins.cxRightWidth = -1;
+            margins.cyBottomHeight = -1;
+            margins.cyTopHeight = -1;
+            DwmExtendFrameIntoClientArea(window, &margins);
             var type = DWM_SYSTEMBACKDROP_TYPE.DWMSBT_MAINWINDOW;
-            DwmSetWindowAttribute(hwnd, (uint)DWMWINDOWATTRIBUTE.DWMWA_SYSTEMBACKDROP_TYPE, &type, sizeof(DWM_SYSTEMBACKDROP_TYPE));
+            DwmSetWindowAttribute(window, (uint)DWMWINDOWATTRIBUTE.DWMWA_SYSTEMBACKDROP_TYPE, &type, sizeof(DWM_SYSTEMBACKDROP_TYPE));
         }
 
-        SetWindowPos(hwnd, HWND.NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        SetWindowPos(window, HWND.NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 
     private unsafe void InitializeXaml()
     {
-        xamlSurface = new(hwnd);
+        xamlSurface = new(window);
+        xamlSurface.Show();
 
-        titlebarSurface = new(hwnd, () =>
+        titlebarSurface = new(window, () =>
         {
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
             panel.Children.Add(new TextBlock { Text = Title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(13, -2, 0, 0), FontSize = 12 });
             return panel;
         });
         titlebarSurface.ClickThrough();
+        titlebarSurface.Show();
     }
 
     public void Activate()
     {
-        ShowWindow(hwnd, SW_SHOWNORMAL);
+        ShowWindow(window, SW_SHOWNORMAL);
     }
 
     public unsafe void ChangeTheme(bool darkmode)
     {
         BOOL val = darkmode;
-        DwmSetWindowAttribute(hwnd, (uint)DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, &val, (uint)sizeof(BOOL));
+        DwmSetWindowAttribute(window, (uint)DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, &val, (uint)sizeof(BOOL));
+        if (!BackdropSupported)
+        {
+            Background = darkmode ? DarkBackground : LightBackground;
+            InvalidateRect(window, null, true);
+        }
     }
 
     private unsafe LRESULT WndProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam)
     {
+        LRESULT dwmResult;
+        if (DwmDefWindowProc(hWnd, uMsg, wParam, lParam, &dwmResult))
+            return dwmResult;
+
+        if (!BackdropSupported)
+            switch (uMsg)
+            {
+                case WM_ERASEBKGND:
+                    PaintBackground(hWnd, (HDC)wParam, Background);
+                    return 1;
+                case WM_PAINT:
+                    PaintClient(hWnd);
+                    return 0;
+                case WM_WINDOWPOSCHANGING:
+                    if (!BackdropSupported && (((WINDOWPOS*)lParam)->flags & SWP_FRAMECHANGED) > 0)
+                        AdjustFrame(hWnd);
+                    return DefWindowProcW(hWnd, uMsg, wParam, lParam);
+            }
+
+
         switch (uMsg)
         {
             case WM_CREATE:
@@ -124,20 +159,17 @@ public class XamlWindow
                 {
                     var dpi = GetDpiForWindow(hWnd);
                     var border = GetSystemMetricsForDpi(SM_CXFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-                    var caption = GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
                     var visualBorder = (int)Math.Ceiling(1 * ((float)dpi / USER_DEFAULT_SCREEN_DPI));
-                    var y = 0;
                     var width = (int)LOWORD(lParam);
                     var height = (int)HIWORD(lParam);
-                    if (IsZoomed(hWnd))
-                    {
-                        y = border - visualBorder;
-                        height -= border - visualBorder;
-                    }
-                    titlebarSurface.Resize(0, y + visualBorder, width, caption + border + visualBorder);
+                    var y = GetTopBorderMaximized(hWnd, dpi);
+                    height -= y;
+                    var caption = GetCaptionSize(hWnd, 2, dpi);
 
-                    xamlSurface.Resize(0, y + border + caption + visualBorder * 2, width, height - border - caption - visualBorder * 2);
-
+                    var hdwp = BeginDeferWindowPos(2);
+                    hdwp = titlebarSurface.Resize(hdwp, 0, y + visualBorder, width, GetCaptionSize(hWnd, windowDpi: dpi));
+                    hdwp = xamlSurface.Resize(hdwp, 0, y + caption, width, height - caption);
+                    EndDeferWindowPos(hdwp);
                     Width = width;
                     Height = height;
                 }
@@ -170,10 +202,6 @@ public class XamlWindow
                 }
             case WM_NCHITTEST:
                 {
-                    LRESULT dwmResult;
-                    if (DwmDefWindowProc(hWnd, uMsg, wParam, lParam, &dwmResult))
-                        return dwmResult;
-
                     var x = LOWORD(lParam);
                     var y = HIWORD(lParam);
                     var ret = DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -202,6 +230,76 @@ public class XamlWindow
 
         return 0;
     }
+
+    private static int GetCaptionSize(HWND hWnd, int visualBorderMult = 1, uint? windowDpi = null)
+    {
+        var dpi = windowDpi ?? GetDpiForWindow(hWnd);
+        var border = GetSystemMetricsForDpi(SM_CXFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        var caption = GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
+        var visualBorder = (int)Math.Ceiling(1 * ((float)dpi / USER_DEFAULT_SCREEN_DPI));
+
+        return border + caption + visualBorder * visualBorderMult;
+    }
+
+    private static int GetTopBorderMaximized(HWND hWnd, uint dpi)
+    {
+        if (IsZoomed(hWnd))
+        {
+            var border = GetSystemMetricsForDpi(SM_CXFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+            var visualBorder = (int)Math.Ceiling(1 * ((float)dpi / USER_DEFAULT_SCREEN_DPI));
+            return border - visualBorder;
+        }
+        return 0;
+    }
+
+    private static unsafe void PaintBackground(HWND hWnd, HDC hdc, HBRUSH hbr)
+    {
+        var dpi = GetDpiForWindow(hWnd);
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        rc.top += GetCaptionSize(hWnd, 2, dpi) + GetTopBorderMaximized(hWnd, dpi);
+        FillRect(hdc, &rc, hbr);
+    }
+
+    private static unsafe void PaintClient(HWND hWnd)
+    {
+        PAINTSTRUCT ps;
+        var hdc = BeginPaint(hWnd, &ps);
+
+        var dpi = GetDpiForWindow(hWnd);
+        var border = GetSystemMetricsForDpi(SM_CXFRAME, dpi) + GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+        var visualBorder = (int)Math.Ceiling(1 * ((float)dpi / USER_DEFAULT_SCREEN_DPI));
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        rc.bottom = GetCaptionSize(hWnd, 2, dpi) + GetTopBorderMaximized(hWnd, dpi);
+
+        HDC memdc = CreateCompatibleDC(hdc);
+        BITMAPINFOHEADER bmpInfoHdr = new BITMAPINFOHEADER();
+        bmpInfoHdr.biSize = (uint)sizeof(BITMAPINFOHEADER);
+        bmpInfoHdr.biWidth = rc.right;
+        bmpInfoHdr.biHeight = -rc.bottom;
+        bmpInfoHdr.biPlanes = 1;
+        bmpInfoHdr.biBitCount = 32;
+
+        HBITMAP hbitmap = CreateDIBSection(memdc, (BITMAPINFO*)&bmpInfoHdr, DIB_RGB_COLORS, null, HANDLE.NULL, 0);
+        HGDIOBJ oldbitmap = SelectObject(memdc, hbitmap);
+
+        BitBlt(hdc, 0, 0, rc.right, rc.bottom, memdc, 0, 0, SRCCOPY);
+        SelectObject(memdc, oldbitmap);
+        DeleteObject(hbitmap);
+        DeleteDC(memdc);
+
+        EndPaint(hWnd, &ps);
+    }
+
+    private static unsafe void AdjustFrame(HWND hWnd, uint? windowDpi = null)
+    {
+        var margins = new MARGINS();
+        var dpi = windowDpi ?? GetDpiForWindow(hWnd);
+        margins.cyTopHeight = GetCaptionSize(hWnd, 2, dpi) + GetTopBorderMaximized(hWnd, dpi);
+        DwmExtendFrameIntoClientArea(hWnd, &margins);
+    }
+
 }
 
 

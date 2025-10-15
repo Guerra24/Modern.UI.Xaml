@@ -29,6 +29,8 @@ public partial class XamlApplication : Application
     private WindowsXamlManager xamlManager = null!;
     private CoreWindow coreWindow = null!;
 
+    private bool Closing;
+
     internal List<XamlCompositionSurface> surfaces = new();
     internal List<XamlWindow> windows = new();
 
@@ -102,8 +104,12 @@ public partial class XamlApplication : Application
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
-            if (windows.Count == 0)
-                PostQuitMessage(0);
+            if (windows.Count == 0 && !Closing)
+            {
+                Closing = true;
+                PostMessageW(coreHwnd, WM_CLOSE, 0, 0);
+                PostMessageW(applicationHwnd, WM_CLOSE, 0, 0);
+            }
         }
     }
 

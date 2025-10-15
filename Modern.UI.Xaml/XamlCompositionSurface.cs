@@ -15,6 +15,7 @@ using static TerraFX.Interop.Windows.GWL;
 using static TerraFX.Interop.Windows.SWP;
 using static TerraFX.Interop.Windows.Windows;
 using static TerraFX.Interop.Windows.WS;
+using static TerraFX.Interop.Windows.SW;
 
 namespace Modern.UI.Xaml;
 
@@ -56,7 +57,12 @@ public partial class XamlCompositionSurface : IDisposable
 
     public void Resize(int x, int y, int width, int height)
     {
-        SetWindowPos(xamlHwnd, HWND.NULL, x, y, width, height, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
+        SetWindowPos(xamlHwnd, HWND.NULL, x, y, width, height, SWP_NOACTIVATE | SWP_NOZORDER);
+    }
+
+    internal HDWP Resize(HDWP hdwp, int x, int y, int width, int height)
+    {
+        return DeferWindowPos(hdwp, xamlHwnd, HWND.NULL, x, y, width, height, SWP_NOACTIVATE | SWP_NOZORDER);
     }
 
     public void OnSetFocus()
@@ -71,6 +77,11 @@ public partial class XamlCompositionSurface : IDisposable
         SetWindowLongPtrW(xamlHwnd, GWL_EXSTYLE, dwExStyle);
     }
 
+    public void Show()
+    {
+        ShowWindow(xamlHwnd, SW_SHOW);
+    }
+
     internal unsafe bool PreTranslateMessage(MSG* msg)
     {
         BOOL result = false;
@@ -82,6 +93,7 @@ public partial class XamlCompositionSurface : IDisposable
 
     public void Dispose()
     {
+        desktopWindowXamlSource.Dispose();
         ((XamlApplication)Application.Current).surfaces.Remove(this);
     }
 

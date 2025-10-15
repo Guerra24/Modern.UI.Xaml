@@ -1,0 +1,14 @@
+﻿<modern:XamlApplication
+    x:Class="Modern.UI.Xaml.Sample.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Modern.UI.Xaml.Sample"
+    xmlns:modern="using:Modern.UI.Xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///Mile.Xaml.Styles.SunValley.xbf" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</modern:XamlApplication>

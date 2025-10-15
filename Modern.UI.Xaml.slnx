@@ -6,5 +6,9 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
+  <Project Path="Modern.UI.Xaml.Sample/Modern.UI.Xaml.Sample.csproj" Id="20d4bb45-10df-4e3d-87d8-c9518a87f985">
+    <Platform Solution="*|ARM64" Project="arm64" />
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
   <Project Path="Modern.UI.Xaml/Modern.UI.Xaml.csproj" Id="22a1f4f3-eba1-452d-8bdc-db55fee7ec07" />
 </Solution>
