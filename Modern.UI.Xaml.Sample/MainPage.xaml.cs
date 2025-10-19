@@ -13,7 +13,7 @@ namespace Modern.UI.Xaml.Sample
     {
         public MainPage()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
     }
 }

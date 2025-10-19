@@ -8,6 +8,6 @@
     mc:Ignorable="d">
 
     <Grid>
-        <Button Content="Sample" HorizontalAlignment="Center"/>
+        <Button Content="Sample" HorizontalAlignment="Center" />
     </Grid>
 </Page>

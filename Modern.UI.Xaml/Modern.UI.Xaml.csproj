@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <PackageReference Include="MinVer" PrivateAssets="All" Version="6.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0-rc.2.25502.107" />
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.2" />
     <PackageReference Include="MrmPatcher" Version="0.0.0-alpha.0.16" />
   </ItemGroup>

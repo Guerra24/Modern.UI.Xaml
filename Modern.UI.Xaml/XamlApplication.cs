@@ -6,6 +6,8 @@
 
 using Modern.UI.Xaml.Interop;
 using MrmPatcher;
+using System.Drawing;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using TerraFX.Interop.Windows;
@@ -24,10 +26,11 @@ namespace Modern.UI.Xaml;
 
 public partial class XamlApplication : Application
 {
-    private HWND coreHwnd = default, applicationHwnd;
-    private WNDPROC wndProc = null!;
+    private HWND coreHwnd = default, applicationHwnd = default;
+    private WNDPROC applicationWindowProc = null!;
     private WindowsXamlManager xamlManager = null!;
     private CoreWindow coreWindow = null!;
+    private Bitmap? icon;
 
     private bool Closing;
 
@@ -41,17 +44,39 @@ public partial class XamlApplication : Application
 
     private unsafe void Initialize()
     {
-        var lpszClassName = (char*)Unsafe.AsPointer(ref Unsafe.AsRef(in "Modern.UI.Xaml.XamlApplication".GetPinnableReference()));
+        {
+            var lpszClassName = (char*)Unsafe.AsPointer(ref Unsafe.AsRef(in "Modern.UI.Xaml.XamlWindow".GetPinnableReference()));
+            xamlWindowProc = new(XamlWindowProc);
 
-        wndProc = new WNDPROC(WndProc);
+            WNDCLASSW wc;
+            wc.lpfnWndProc = (delegate* unmanaged<HWND, uint, WPARAM, LPARAM, LRESULT>)Marshal.GetFunctionPointerForDelegate(xamlWindowProc);
+            wc.hInstance = GetModuleHandleW(null);
+            wc.lpszClassName = lpszClassName;
 
-        WNDCLASSW wc;
-        wc.lpfnWndProc = (delegate* unmanaged<HWND, uint, WPARAM, LPARAM, LRESULT>)Marshal.GetFunctionPointerForDelegate(wndProc);
-        wc.hInstance = GetModuleHandleW(null);
-        wc.lpszClassName = lpszClassName;
-        RegisterClassW(&wc);
+            var assembly = Assembly.GetEntryAssembly();
+            var stream = assembly?.GetManifestResourceStream($"{assembly.GetName().Name}.icon.png") ??
+                         assembly?.GetManifestResourceStream($"{assembly.GetName().Name}.icon.ico");
 
-        applicationHwnd = CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_NOREDIRECTIONBITMAP, lpszClassName, null, WS_DISABLED, 0, 0, 0, 0, HWND.HWND_MESSAGE, HMENU.NULL, wc.hInstance, null);
+            if (stream != null)
+            {
+                icon = new Bitmap(stream);
+                wc.hIcon = new HICON((void*)icon.GetHicon());
+            }
+
+            RegisterClassW(&wc);
+        }
+        {
+            var lpszClassName = (char*)Unsafe.AsPointer(ref Unsafe.AsRef(in "Modern.UI.Xaml.XamlApplication".GetPinnableReference()));
+            applicationWindowProc = new(ApplicationWindowProc);
+
+            WNDCLASSW wc;
+            wc.lpfnWndProc = (delegate* unmanaged<HWND, uint, WPARAM, LPARAM, LRESULT>)Marshal.GetFunctionPointerForDelegate(applicationWindowProc);
+            wc.hInstance = GetModuleHandleW(null);
+            wc.lpszClassName = lpszClassName;
+            RegisterClassW(&wc);
+
+            applicationHwnd = CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP, lpszClassName, null, WS_DISABLED, 0, 0, 0, 0, HWND.NULL, HMENU.NULL, wc.hInstance, null);
+        }
     }
 
     private unsafe void InitializeXaml()
@@ -76,6 +101,9 @@ public partial class XamlApplication : Application
         SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
 
         ((IXamlSourceTransparency)(object)Window.Current).SetIsBackgroundTransparent(true);
+
+        if (!BackdropSupported)
+            Background = Current.RequestedTheme == ApplicationTheme.Dark ? DarkBackground : LightBackground;
 
         OnLaunched();
     }
@@ -107,13 +135,13 @@ public partial class XamlApplication : Application
             if (windows.Count == 0 && !Closing)
             {
                 Closing = true;
-                PostMessageW(coreHwnd, WM_CLOSE, 0, 0);
+                SendMessageW(coreHwnd, WM_CLOSE, 0, 0);
                 PostMessageW(applicationHwnd, WM_CLOSE, 0, 0);
             }
         }
     }
 
-    private unsafe LRESULT WndProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam)
+    private unsafe LRESULT ApplicationWindowProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam)
     {
         switch (uMsg)
         {
@@ -122,10 +150,13 @@ public partial class XamlApplication : Application
                 break;
             case WM_SETTINGCHANGE:
             case WM_THEMECHANGED:
+                if (!BackdropSupported)
+                    Background = Current.RequestedTheme == ApplicationTheme.Dark ? DarkBackground : LightBackground;
                 SendMessageW(coreHwnd, uMsg, wParam, lParam);
                 break;
             case WM_DESTROY:
                 xamlManager.Dispose();
+                icon?.Dispose();
                 PostQuitMessage(0);
                 break;
             default:

@@ -8,14 +8,13 @@ using System.Runtime.CompilerServices;
 using TerraFX.Interop.Windows;
 using TerraFX.Interop.WinRT;
 using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Hosting;
 using WinRT;
 using static TerraFX.Interop.Windows.GWL;
+using static TerraFX.Interop.Windows.SW;
 using static TerraFX.Interop.Windows.SWP;
 using static TerraFX.Interop.Windows.Windows;
 using static TerraFX.Interop.Windows.WS;
-using static TerraFX.Interop.Windows.SW;
 
 namespace Modern.UI.Xaml;
 
@@ -49,8 +48,6 @@ public partial class XamlCompositionSurface : IDisposable
 
         if (content != null)
             desktopWindowXamlSource.Content = content();
-        else
-            desktopWindowXamlSource.Content = new Grid();
 
         ((XamlApplication)Application.Current).surfaces.Add(this);
     }
