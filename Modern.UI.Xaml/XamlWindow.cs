@@ -62,11 +62,6 @@ public class XamlWindow
         windowSubclassProc = new SUBCLASSPROC(WindowSubclassProc);
         SetWindowSubclass(window, (delegate* unmanaged<HWND, uint, WPARAM, LPARAM, nuint, nuint, LRESULT>)Marshal.GetFunctionPointerForDelegate(windowSubclassProc), 0, 0);
 
-        InitializeXaml();
-    }
-
-    private unsafe void InitializeXaml()
-    {
         xamlSurface = new(window);
         xamlSurface.Show();
 

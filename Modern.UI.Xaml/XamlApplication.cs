@@ -34,6 +34,9 @@ public partial class XamlApplication : Application
 
     private bool Closing;
 
+    // This placeholder only exist on Win10
+    private XamlCompositionSurface? placeholder;
+
     internal List<XamlCompositionSurface> surfaces = new();
     internal List<XamlWindow> windows = new();
 
@@ -91,6 +94,9 @@ public partial class XamlApplication : Application
         {
             xamlManager = WindowsXamlManager.InitializeForCurrentThread();
         }
+
+        if (Environment.OSVersion.Version < new Version(10, 0, 22000, 0))
+            placeholder = new(applicationHwnd);
 
         coreWindow = CoreWindow.GetForCurrentThread();
 
@@ -155,6 +161,7 @@ public partial class XamlApplication : Application
                 SendMessageW(coreHwnd, uMsg, wParam, lParam);
                 break;
             case WM_DESTROY:
+                placeholder?.Dispose();
                 xamlManager.Dispose();
                 icon?.Dispose();
                 PostQuitMessage(0);

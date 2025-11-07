@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net9.0-windows10.0.26100.0;net10.0-windows10.0.26100.0</TargetFrameworks>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <Nullable>enable</Nullable>
+    <UseUwp>true</UseUwp>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <IsAotCompatible>true</IsAotCompatible>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
+    <MicrosoftWindowsSdkBuildToolsMSIXPackageVersion>1.7.20250829.1</MicrosoftWindowsSdkBuildToolsMSIXPackageVersion>
+    <MicrosoftWindowsSDKBuildToolsPackageVersion>10.0.26100.6584</MicrosoftWindowsSDKBuildToolsPackageVersion>
+    <WindowsSdkPackageVersion>10.0.26100.73-preview</WindowsSdkPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Labs.Uwp.DependencyPropertyGenerator" Version="0.1.251008-build.2333" PrivateAssets="All" />
+  </ItemGroup>
+  
+</Project>

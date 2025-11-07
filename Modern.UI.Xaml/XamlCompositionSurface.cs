@@ -90,6 +90,7 @@ public partial class XamlCompositionSurface : IDisposable
 
     public void Dispose()
     {
+        nativeSource.Dispose();
         desktopWindowXamlSource.Dispose();
         ((XamlApplication)Application.Current).surfaces.Remove(this);
     }
